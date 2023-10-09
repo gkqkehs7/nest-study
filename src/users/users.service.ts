@@ -6,6 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from '../entities/user.entity';
 import { DataSource, Repository } from 'typeorm';
 import { ulid } from 'ulid';
+import { NotFoundError } from 'rxjs';
 
 @Injectable()
 export class UsersService {
@@ -89,6 +90,22 @@ export class UsersService {
       // 생성한 queryRunner는 해제시켜 주어야 함
       await queryRunner.release();
     }
+  }
+
+  async verifyEamil(signupVerifyToken: string): Promise<void> {
+    const user = await this.userRepository.findOne({
+      where: { signupVerifyToken },
+    });
+
+    if (!user) {
+      throw new NotFoundError('유저가 존재하지 않습니다');
+    }
+    //
+    // return this.login({
+    //   id: user.id,
+    //   name: user.name,
+    //   email: user.email,
+    // });
   }
 
   // private async sendMemberJoinEmail(email: string, signupVerifyToken: string) {}

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -6,15 +6,22 @@ import { ConfigModule } from '@nestjs/config';
 import emailConfig from './config/emailConfig';
 import { validationSchema } from './config/validationSchema';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { LoggerMiddleware } from './middlewares/logger.middleware';
+import { Logger2Middleware } from './middlewares/logger2.middleware';
+import { AuthModule } from './auth/auth.module';
+import jwtConfig from './config/jwtConfig';
+import { AuthGuard } from './Guards/Auth.guard';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
+    AuthModule,
     UsersModule,
     ConfigModule.forRoot({
       envFilePath: [`${__dirname}/config/env/.${process.env.NODE_ENV}.env`],
-      load: [emailConfig],
+      load: [emailConfig, jwtConfig],
       isGlobal: true,
-      validationSchema,
+      // validationSchema,
     }),
     TypeOrmModule.forRoot({
       type: 'mysql',
@@ -32,6 +39,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: AuthGuard }],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): any {
+    // 나열된 순서대로 middleware 적용
+    consumer.apply(LoggerMiddleware, Logger2Middleware).forRoutes('/users');
+  }
+}
